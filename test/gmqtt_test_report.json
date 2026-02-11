@@ -1,0 +1,157 @@
+{
+  "Total": 18,
+  "Passed": 18,
+  "Failed": 0,
+  "Results": [
+    {
+      "Name": "1.1 基础连接与断开",
+      "Passed": true,
+      "Error": null,
+      "Duration": 1874291,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:30.246147+08:00"
+    },
+    {
+      "Name": "1.2 连接回调函数",
+      "Passed": true,
+      "Error": null,
+      "Duration": 101961125,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:30.248036+08:00"
+    },
+    {
+      "Name": "2.1 QoS0 + CleanSession=true",
+      "Passed": true,
+      "Error": null,
+      "Duration": 215927125,
+      "Details": "QoS=0, CleanSession=true, 发送=10, 接收=10",
+      "Timestamp": "2026-02-11T14:38:30.350012+08:00"
+    },
+    {
+      "Name": "2.2 QoS0 + CleanSession=false",
+      "Passed": true,
+      "Error": null,
+      "Duration": 215923250,
+      "Details": "QoS=0, CleanSession=false, 发送=10, 接收=10",
+      "Timestamp": "2026-02-11T14:38:30.566074+08:00"
+    },
+    {
+      "Name": "2.3 QoS1 + CleanSession=true",
+      "Passed": true,
+      "Error": null,
+      "Duration": 235576875,
+      "Details": "QoS=1, CleanSession=true, 发送=10, 接收=10",
+      "Timestamp": "2026-02-11T14:38:30.782025+08:00"
+    },
+    {
+      "Name": "2.4 QoS1 + CleanSession=false",
+      "Passed": true,
+      "Error": null,
+      "Duration": 231726000,
+      "Details": "QoS=1, CleanSession=false, 发送=10, 接收=10",
+      "Timestamp": "2026-02-11T14:38:31.017626+08:00"
+    },
+    {
+      "Name": "2.5 QoS2 + CleanSession=true",
+      "Passed": true,
+      "Error": null,
+      "Duration": 242672208,
+      "Details": "QoS=2, CleanSession=true, 发送=10, 接收=10",
+      "Timestamp": "2026-02-11T14:38:31.249664+08:00"
+    },
+    {
+      "Name": "2.6 QoS2 + CleanSession=false",
+      "Passed": true,
+      "Error": null,
+      "Duration": 244848458,
+      "Details": "QoS=2, CleanSession=false, 发送=10, 接收=10",
+      "Timestamp": "2026-02-11T14:38:31.492471+08:00"
+    },
+    {
+      "Name": "3.1 离线消息接收测试",
+      "Passed": true,
+      "Error": null,
+      "Duration": 446734500,
+      "Details": "离线消息测试: 发送=10, 重连后接收=10",
+      "Timestamp": "2026-02-11T14:38:31.737488+08:00"
+    },
+    {
+      "Name": "4.1 保留消息发送与接收",
+      "Passed": true,
+      "Error": null,
+      "Duration": 209070458,
+      "Details": "保留消息正确接收",
+      "Timestamp": "2026-02-11T14:38:32.184318+08:00"
+    },
+    {
+      "Name": "5.1 遗嘱消息触发",
+      "Passed": true,
+      "Error": null,
+      "Duration": 213984875,
+      "Details": "遗嘱消息正确接收",
+      "Timestamp": "2026-02-11T14:38:32.393426+08:00"
+    },
+    {
+      "Name": "6.1 Publisher 所有方法",
+      "Passed": true,
+      "Error": null,
+      "Duration": 7845125,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:32.607568+08:00"
+    },
+    {
+      "Name": "7.1 Subscriber 所有方法",
+      "Passed": true,
+      "Error": null,
+      "Duration": 313745833,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:32.61549+08:00"
+    },
+    {
+      "Name": "7.2 SubscriberGroup 管理",
+      "Passed": true,
+      "Error": null,
+      "Duration": 314490708,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:32.929288+08:00"
+    },
+    {
+      "Name": "7.3 批量订阅",
+      "Passed": true,
+      "Error": null,
+      "Duration": 110618042,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:33.243819+08:00"
+    },
+    {
+      "Name": "8.1 JSON 序列化与反序列化",
+      "Passed": true,
+      "Error": null,
+      "Duration": 108119208,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:33.354468+08:00"
+    },
+    {
+      "Name": "9.1 RegisterClient/GetClient/CloseAll",
+      "Passed": true,
+      "Error": null,
+      "Duration": 4642459,
+      "Details": "",
+      "Timestamp": "2026-02-11T14:38:33.462689+08:00"
+    },
+    {
+      "Name": "10.1 多客户端并发发布",
+      "Passed": true,
+      "Error": null,
+      "Duration": 185836375,
+      "Details": "并发测试: 10个客户端, 每个发送10条, 总接收=100",
+      "Timestamp": "2026-02-11T14:38:33.467391+08:00"
+    }
+  ],
+  "MessagesSent": 182,
+  "MessagesRecv": 180,
+  "MessagesLost": 0,
+  "MessagesDup": 0,
+  "StartTime": "2026-02-11T14:38:30.246146+08:00",
+  "EndTime": "2026-02-11T14:38:33.653257+08:00"
+}
