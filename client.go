@@ -3,6 +3,7 @@ package gmqtt
 import (
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ type Client struct {
 
 	// 订阅管理
 	subscriptions map[string]*Subscription
+	subOrder      []string
 	subLock       sync.RWMutex
 
 	// 默认消息处理器
@@ -38,6 +40,7 @@ func NewClient(opts *ClientOptions) (*Client, error) {
 	c := &Client{
 		options:       opts,
 		subscriptions: make(map[string]*Subscription),
+		subOrder:      make([]string, 0),
 	}
 
 	// 创建paho客户端选项
@@ -103,6 +106,95 @@ func NewClient(opts *ClientOptions) (*Client, error) {
 
 	c.client = mqtt.NewClient(mqttOpts)
 	return c, nil
+}
+
+func (c *Client) addSubscription(topic string, qos QoS, handler MessageHandler) {
+	if _, exists := c.subscriptions[topic]; !exists {
+		c.subOrder = append(c.subOrder, topic)
+	}
+	c.subscriptions[topic] = &Subscription{
+		Topic:   topic,
+		QoS:     qos,
+		Handler: handler,
+	}
+}
+
+func (c *Client) removeSubscription(topic string) {
+	delete(c.subscriptions, topic)
+	for i, filter := range c.subOrder {
+		if filter == topic {
+			c.subOrder = append(c.subOrder[:i], c.subOrder[i+1:]...)
+			return
+		}
+	}
+}
+
+func buildSharedSubscriptionTopic(group, filter string) (string, error) {
+	if group == "" || filter == "" || strings.ContainsAny(group, "/+#") {
+		return "", ErrInvalidSharedSubscription
+	}
+	return "$share/" + group + "/" + filter, nil
+}
+
+func logicalSubscriptionFilter(filter string) string {
+	if !strings.HasPrefix(filter, "$share/") {
+		return filter
+	}
+
+	rest := strings.TrimPrefix(filter, "$share/")
+	separator := strings.IndexByte(rest, '/')
+	if separator < 0 || separator == len(rest)-1 {
+		return filter
+	}
+	return rest[separator+1:]
+}
+
+func topicFilterMatches(filter, topic string) bool {
+	filterLevels := strings.Split(filter, "/")
+	topicLevels := strings.Split(topic, "/")
+
+	for i, filterLevel := range filterLevels {
+		if filterLevel == "#" {
+			return i == len(filterLevels)-1
+		}
+		if i >= len(topicLevels) {
+			return false
+		}
+		if filterLevel == "+" {
+			continue
+		}
+		if filterLevel != topicLevels[i] {
+			return false
+		}
+	}
+
+	return len(filterLevels) == len(topicLevels)
+}
+
+func (c *Client) findHandler(topic string) MessageHandler {
+	c.subLock.RLock()
+	defer c.subLock.RUnlock()
+
+	if sub, exists := c.subscriptions[topic]; exists && sub.Handler != nil {
+		return sub.Handler
+	}
+
+	for _, filter := range c.subOrder {
+		if filter == topic {
+			continue
+		}
+
+		sub := c.subscriptions[filter]
+		if sub == nil || sub.Handler == nil {
+			continue
+		}
+
+		if topicFilterMatches(logicalSubscriptionFilter(filter), topic) {
+			return sub.Handler
+		}
+	}
+
+	return nil
 }
 
 // Connect 连接到MQTT Broker
@@ -184,11 +276,7 @@ func (c *Client) Subscribe(topic string, qos QoS, handler MessageHandler) error 
 
 	// 保存订阅信息
 	c.subLock.Lock()
-	c.subscriptions[topic] = &Subscription{
-		Topic:   topic,
-		QoS:     qos,
-		Handler: handler,
-	}
+	c.addSubscription(topic, qos, handler)
 	c.subLock.Unlock()
 
 	// 执行订阅
@@ -198,7 +286,7 @@ func (c *Client) Subscribe(topic string, qos QoS, handler MessageHandler) error 
 
 	if token.Wait() && token.Error() != nil {
 		c.subLock.Lock()
-		delete(c.subscriptions, topic)
+		c.removeSubscription(topic)
 		c.subLock.Unlock()
 		return fmt.Errorf("gmqtt: subscribe failed: %w", token.Error())
 	}
@@ -219,18 +307,12 @@ func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler Message
 
 	// 转换为paho格式
 	filters := make(map[string]byte)
+	c.subLock.Lock()
 	for topic, qos := range subscriptions {
 		filters[topic] = byte(qos)
-
-		// 保存订阅信息
-		c.subLock.Lock()
-		c.subscriptions[topic] = &Subscription{
-			Topic:   topic,
-			QoS:     qos,
-			Handler: handler,
-		}
-		c.subLock.Unlock()
+		c.addSubscription(topic, qos, handler)
 	}
+	c.subLock.Unlock()
 
 	// 执行批量订阅
 	token := c.client.SubscribeMultiple(filters, func(client mqtt.Client, msg mqtt.Message) {
@@ -241,7 +323,7 @@ func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler Message
 		// 清理订阅信息
 		c.subLock.Lock()
 		for topic := range subscriptions {
-			delete(c.subscriptions, topic)
+			c.removeSubscription(topic)
 		}
 		c.subLock.Unlock()
 		return fmt.Errorf("gmqtt: subscribe multiple failed: %w", token.Error())
@@ -249,6 +331,41 @@ func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler Message
 
 	log.Printf("gmqtt: client [%s] subscribed to %d topics", c.options.ClientID, len(subscriptions))
 	return nil
+}
+
+// SubscribeShared 订阅共享主题
+func (c *Client) SubscribeShared(group, topic string, qos QoS, handler MessageHandler) error {
+	sharedTopic, err := buildSharedSubscriptionTopic(group, topic)
+	if err != nil {
+		return err
+	}
+	return c.Subscribe(sharedTopic, qos, handler)
+}
+
+// SubscribeSharedMultiple 批量订阅共享主题
+func (c *Client) SubscribeSharedMultiple(group string, subscriptions map[string]QoS, handler MessageHandler) error {
+	sharedSubscriptions := make(map[string]QoS)
+	for topic, qos := range subscriptions {
+		sharedTopic, err := buildSharedSubscriptionTopic(group, topic)
+		if err != nil {
+			return err
+		}
+		sharedSubscriptions[sharedTopic] = qos
+	}
+	return c.SubscribeMultiple(sharedSubscriptions, handler)
+}
+
+// UnsubscribeShared 取消共享订阅
+func (c *Client) UnsubscribeShared(group string, topics ...string) error {
+	sharedTopics := make([]string, 0, len(topics))
+	for _, topic := range topics {
+		sharedTopic, err := buildSharedSubscriptionTopic(group, topic)
+		if err != nil {
+			return err
+		}
+		sharedTopics = append(sharedTopics, sharedTopic)
+	}
+	return c.Unsubscribe(sharedTopics...)
 }
 
 // Unsubscribe 取消订阅
@@ -265,7 +382,7 @@ func (c *Client) Unsubscribe(topics ...string) error {
 	// 清理订阅信息
 	c.subLock.Lock()
 	for _, topic := range topics {
-		delete(c.subscriptions, topic)
+		c.removeSubscription(topic)
 	}
 	c.subLock.Unlock()
 
@@ -284,15 +401,8 @@ func (c *Client) SetDefaultHandler(handler MessageHandler) {
 func (c *Client) handleMessage(msg mqtt.Message) {
 	topic := msg.Topic()
 
-	// 查找对应的处理器
-	c.subLock.RLock()
-	sub, exists := c.subscriptions[topic]
-	c.subLock.RUnlock()
-
 	var handler MessageHandler
-	if exists && sub.Handler != nil {
-		handler = sub.Handler
-	} else {
+	if handler = c.findHandler(topic); handler == nil {
 		c.mu.RLock()
 		handler = c.defaultHandler
 		c.mu.RUnlock()

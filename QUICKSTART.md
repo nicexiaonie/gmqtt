@@ -229,6 +229,17 @@ subscriber.SetJSONHandler(func(topic string, d interface{}) error {
 subscriber.Subscribe()
 ```
 
+```go
+// 多个服务实例共享消费同一类事件
+err := client.SubscribeShared("order-workers", "events/order/#", gmqtt.QoS1, func(topic string, payload []byte) error {
+    log.Printf("处理订单事件: topic=%s payload=%s", topic, string(payload))
+    return nil
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
 ## 配置示例
 
 ### 生产环境配置

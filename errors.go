@@ -29,4 +29,7 @@ var (
 
 	// ErrUnsubscribeTimeout 取消订阅超时
 	ErrUnsubscribeTimeout = errors.New("gmqtt: unsubscribe timeout")
+
+	// ErrInvalidSharedSubscription shared subscription 参数无效
+	ErrInvalidSharedSubscription = errors.New("gmqtt: invalid shared subscription")
 )

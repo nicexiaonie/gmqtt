@@ -230,6 +230,7 @@ func TestErrorTypes(t *testing.T) {
 		ErrPublishTimeout,
 		ErrSubscribeTimeout,
 		ErrUnsubscribeTimeout,
+		ErrInvalidSharedSubscription,
 	}
 
 	for _, err := range errors {

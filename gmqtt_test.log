@@ -1,0 +1,144 @@
+2026/05/28 09:59:14 main.go:186: ▶ 运行测试: 1.1 基础连接与断开
+2026/05/28 10:04:16 main.go:186: ▶ 运行测试: 1.1 基础连接与断开
+2026/05/28 10:04:16 client.go:214: gmqtt: client [test-basic-conn] connected successfully
+2026/05/28 10:04:16 client.go:225: gmqtt: client [test-basic-conn] disconnected
+2026/05/28 10:04:16 main.go:196:   ✓ 通过 (耗时: 35.461791ms)
+2026/05/28 10:04:16 main.go:186: ▶ 运行测试: 1.2 连接回调函数
+2026/05/28 10:04:16 client.go:214: gmqtt: client [test-callbacks] connected successfully
+2026/05/28 10:04:16 client.go:89: gmqtt: client [test-callbacks] connected
+2026/05/28 10:04:16 client.go:225: gmqtt: client [test-callbacks] disconnected
+2026/05/28 10:04:16 main.go:196:   ✓ 通过 (耗时: 137.527458ms)
+2026/05/28 10:04:16 main.go:209: ▶ 运行测试: 2.1 QoS0 + CleanSession=true
+2026/05/28 10:04:16 client.go:214: gmqtt: client [test-qos0-cleantrue] connected successfully
+2026/05/28 10:04:16 client.go:294: gmqtt: client [test-qos0-cleantrue] subscribed to topic [test/qos0/test-qos0-cleantrue] with QoS 0
+2026/05/28 10:04:16 client.go:225: gmqtt: client [test-qos0-cleantrue] disconnected
+2026/05/28 10:04:16 main.go:220:   ✓ 通过 (耗时: 285.717208ms)
+2026/05/28 10:04:16 main.go:222:   详情: QoS=0, CleanSession=true, 发送=10, 接收=10
+2026/05/28 10:04:16 main.go:209: ▶ 运行测试: 2.2 QoS0 + CleanSession=false
+2026/05/28 10:04:17 client.go:214: gmqtt: client [test-qos0-cleanfalse] connected successfully
+2026/05/28 10:04:17 client.go:294: gmqtt: client [test-qos0-cleanfalse] subscribed to topic [test/qos0/test-qos0-cleanfalse] with QoS 0
+2026/05/28 10:04:17 client.go:225: gmqtt: client [test-qos0-cleanfalse] disconnected
+2026/05/28 10:04:17 main.go:220:   ✓ 通过 (耗时: 280.234625ms)
+2026/05/28 10:04:17 main.go:222:   详情: QoS=0, CleanSession=false, 发送=10, 接收=10
+2026/05/28 10:04:17 main.go:209: ▶ 运行测试: 2.3 QoS1 + CleanSession=true
+2026/05/28 10:04:17 client.go:214: gmqtt: client [test-qos1-cleantrue] connected successfully
+2026/05/28 10:04:17 client.go:294: gmqtt: client [test-qos1-cleantrue] subscribed to topic [test/qos1/test-qos1-cleantrue] with QoS 1
+2026/05/28 10:04:17 client.go:225: gmqtt: client [test-qos1-cleantrue] disconnected
+2026/05/28 10:04:17 main.go:220:   ✓ 通过 (耗时: 559.12725ms)
+2026/05/28 10:04:17 main.go:222:   详情: QoS=1, CleanSession=true, 发送=10, 接收=10
+2026/05/28 10:04:17 main.go:209: ▶ 运行测试: 2.4 QoS1 + CleanSession=false
+2026/05/28 10:04:17 client.go:214: gmqtt: client [test-qos1-cleanfalse] connected successfully
+2026/05/28 10:04:17 client.go:294: gmqtt: client [test-qos1-cleanfalse] subscribed to topic [test/qos1/test-qos1-cleanfalse] with QoS 1
+2026/05/28 10:04:18 client.go:225: gmqtt: client [test-qos1-cleanfalse] disconnected
+2026/05/28 10:04:18 main.go:220:   ✓ 通过 (耗时: 501.085625ms)
+2026/05/28 10:04:18 main.go:222:   详情: QoS=1, CleanSession=false, 发送=10, 接收=10
+2026/05/28 10:04:18 main.go:209: ▶ 运行测试: 2.5 QoS2 + CleanSession=true
+2026/05/28 10:04:18 client.go:214: gmqtt: client [test-qos2-cleantrue] connected successfully
+2026/05/28 10:04:18 client.go:294: gmqtt: client [test-qos2-cleantrue] subscribed to topic [test/qos2/test-qos2-cleantrue] with QoS 2
+2026/05/28 10:04:19 client.go:225: gmqtt: client [test-qos2-cleantrue] disconnected
+2026/05/28 10:04:19 main.go:220:   ✓ 通过 (耗时: 1.024391208s)
+2026/05/28 10:04:19 main.go:222:   详情: QoS=2, CleanSession=true, 发送=10, 接收=10
+2026/05/28 10:04:19 main.go:209: ▶ 运行测试: 2.6 QoS2 + CleanSession=false
+2026/05/28 10:04:19 client.go:214: gmqtt: client [test-qos2-cleanfalse] connected successfully
+2026/05/28 10:04:19 client.go:294: gmqtt: client [test-qos2-cleanfalse] subscribed to topic [test/qos2/test-qos2-cleanfalse] with QoS 2
+2026/05/28 10:04:20 client.go:225: gmqtt: client [test-qos2-cleanfalse] disconnected
+2026/05/28 10:04:20 main.go:220:   ✓ 通过 (耗时: 1.005866833s)
+2026/05/28 10:04:20 main.go:222:   详情: QoS=2, CleanSession=false, 发送=10, 接收=10
+2026/05/28 10:04:20 main.go:209: ▶ 运行测试: 3.1 离线消息接收测试
+2026/05/28 10:04:20 client.go:214: gmqtt: client [test-persistent-session] connected successfully
+2026/05/28 10:04:20 client.go:294: gmqtt: client [test-persistent-session] subscribed to topic [test/persistent/messages] with QoS 1
+2026/05/28 10:04:20 client.go:225: gmqtt: client [test-persistent-session] disconnected
+2026/05/28 10:04:20 client.go:214: gmqtt: client [test-publisher] connected successfully
+2026/05/28 10:04:21 client.go:225: gmqtt: client [test-publisher] disconnected
+2026/05/28 10:04:21 client.go:214: gmqtt: client [test-persistent-session] connected successfully
+2026/05/28 10:04:21 client.go:294: gmqtt: client [test-persistent-session] subscribed to topic [test/persistent/messages] with QoS 1
+2026/05/28 10:04:21 client.go:225: gmqtt: client [test-persistent-session] disconnected
+2026/05/28 10:04:21 main.go:220:   ✓ 通过 (耗时: 1.147136542s)
+2026/05/28 10:04:21 main.go:222:   详情: 离线消息测试: 发送=10, 重连后接收=10
+2026/05/28 10:04:21 main.go:209: ▶ 运行测试: 4.1 保留消息发送与接收
+2026/05/28 10:04:21 client.go:214: gmqtt: client [test-retained-pub] connected successfully
+2026/05/28 10:04:21 client.go:225: gmqtt: client [test-retained-pub] disconnected
+2026/05/28 10:04:21 client.go:214: gmqtt: client [test-retained-sub] connected successfully
+2026/05/28 10:04:21 client.go:294: gmqtt: client [test-retained-sub] subscribed to topic [test/retained/message] with QoS 1
+2026/05/28 10:04:21 client.go:225: gmqtt: client [test-retained-sub] disconnected
+2026/05/28 10:04:21 main.go:220:   ✓ 通过 (耗时: 333.178416ms)
+2026/05/28 10:04:21 main.go:222:   详情: 保留消息正确接收
+2026/05/28 10:04:21 main.go:209: ▶ 运行测试: 5.1 遗嘱消息触发
+2026/05/28 10:04:21 client.go:214: gmqtt: client [test-will-listener] connected successfully
+2026/05/28 10:04:21 client.go:294: gmqtt: client [test-will-listener] subscribed to topic [test/will] with QoS 1
+2026/05/28 10:04:22 client.go:214: gmqtt: client [test-will-client] connected successfully
+2026/05/28 10:04:22 client.go:225: gmqtt: client [test-will-client] disconnected
+2026/05/28 10:04:22 client.go:225: gmqtt: client [test-will-listener] disconnected
+2026/05/28 10:04:22 main.go:220:   ✓ 通过 (耗时: 320.917625ms)
+2026/05/28 10:04:22 main.go:222:   详情: 遗嘱消息正确接收
+2026/05/28 10:04:22 main.go:186: ▶ 运行测试: 6.1 Publisher 所有方法
+2026/05/28 10:04:22 client.go:214: gmqtt: client [test-publisher-api] connected successfully
+2026/05/28 10:04:22 client.go:225: gmqtt: client [test-publisher-api] disconnected
+2026/05/28 10:04:22 main.go:196:   ✓ 通过 (耗时: 117.725583ms)
+2026/05/28 10:04:22 main.go:186: ▶ 运行测试: 7.1 Subscriber 所有方法
+2026/05/28 10:04:22 client.go:214: gmqtt: client [test-subscriber-api] connected successfully
+2026/05/28 10:04:22 client.go:332: gmqtt: client [test-subscriber-api] subscribed to 2 topics
+2026/05/28 10:04:22 client.go:389: gmqtt: client [test-subscriber-api] unsubscribed from topics: [test/sub1 test/sub3]
+2026/05/28 10:04:22 client.go:225: gmqtt: client [test-subscriber-api] disconnected
+2026/05/28 10:04:22 main.go:196:   ✓ 通过 (耗时: 430.021667ms)
+2026/05/28 10:04:22 main.go:186: ▶ 运行测试: 7.2 SubscriberGroup 管理
+2026/05/28 10:04:22 client.go:214: gmqtt: client [test-sub-group] connected successfully
+2026/05/28 10:04:22 client.go:294: gmqtt: client [test-sub-group] subscribed to topic [test/group1] with QoS 1
+2026/05/28 10:04:22 client.go:294: gmqtt: client [test-sub-group] subscribed to topic [test/group2] with QoS 1
+2026/05/28 10:04:23 client.go:389: gmqtt: client [test-sub-group] unsubscribed from topics: [test/group1]
+2026/05/28 10:04:23 client.go:389: gmqtt: client [test-sub-group] unsubscribed from topics: [test/group2]
+2026/05/28 10:04:23 client.go:225: gmqtt: client [test-sub-group] disconnected
+2026/05/28 10:04:23 main.go:196:   ✓ 通过 (耗时: 502.423416ms)
+2026/05/28 10:04:23 main.go:186: ▶ 运行测试: 7.3 批量订阅
+2026/05/28 10:04:23 client.go:214: gmqtt: client [test-multi-sub] connected successfully
+2026/05/28 10:04:23 client.go:332: gmqtt: client [test-multi-sub] subscribed to 3 topics
+2026/05/28 10:04:23 client.go:225: gmqtt: client [test-multi-sub] disconnected
+2026/05/28 10:04:23 main.go:196:   ✓ 通过 (耗时: 252.344584ms)
+2026/05/28 10:04:23 main.go:209: ▶ 运行测试: 7.4 Shared Subscription 分组消费
+2026/05/28 10:04:23 client.go:214: gmqtt: client [test-shared-worker-1] connected successfully
+2026/05/28 10:04:23 client.go:294: gmqtt: client [test-shared-worker-1] subscribed to topic [$share/order-workers/test/shared/order/#] with QoS 1
+2026/05/28 10:04:23 client.go:214: gmqtt: client [test-shared-worker-2] connected successfully
+2026/05/28 10:04:23 client.go:294: gmqtt: client [test-shared-worker-2] subscribed to topic [$share/order-workers/test/shared/order/#] with QoS 1
+2026/05/28 10:04:23 client.go:214: gmqtt: client [test-shared-publisher] connected successfully
+2026/05/28 10:04:24 client.go:225: gmqtt: client [test-shared-publisher] disconnected
+2026/05/28 10:04:24 client.go:225: gmqtt: client [test-shared-worker-2] disconnected
+2026/05/28 10:04:24 client.go:225: gmqtt: client [test-shared-worker-1] disconnected
+2026/05/28 10:04:24 main.go:220:   ✓ 通过 (耗时: 826.99125ms)
+2026/05/28 10:04:24 main.go:222:   详情: shared group=order-workers, filter=test/shared/order/#, 发送=20, worker-1接收=10, worker-2接收=10
+2026/05/28 10:04:24 main.go:186: ▶ 运行测试: 8.1 JSON 序列化与反序列化
+2026/05/28 10:04:24 client.go:214: gmqtt: client [test-json] connected successfully
+2026/05/28 10:04:24 client.go:294: gmqtt: client [test-json] subscribed to topic [test/json] with QoS 1
+2026/05/28 10:04:24 client.go:225: gmqtt: client [test-json] disconnected
+2026/05/28 10:04:24 main.go:196:   ✓ 通过 (耗时: 215.466333ms)
+2026/05/28 10:04:24 main.go:186: ▶ 运行测试: 9.1 RegisterClient/GetClient/CloseAll
+2026/05/28 10:04:24 client.go:441: gmqtt: client [test-client] registered
+2026/05/28 10:04:24 client.go:214: gmqtt: client [test-global-client] connected successfully
+2026/05/28 10:04:24 client.go:225: gmqtt: client [test-global-client] disconnected
+2026/05/28 10:04:24 client.go:464: gmqtt: client [test-client] closed
+2026/05/28 10:04:24 main.go:196:   ✓ 通过 (耗时: 418.848833ms)
+2026/05/28 10:04:24 main.go:209: ▶ 运行测试: 10.1 多客户端并发发布
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-sub] connected successfully
+2026/05/28 10:04:25 client.go:294: gmqtt: client [test-concurrent-sub] subscribed to topic [test/concurrent] with QoS 1
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-8] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-0] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-9] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-6] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-5] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-1] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-2] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-7] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-4] connected successfully
+2026/05/28 10:04:25 client.go:214: gmqtt: client [test-concurrent-pub-3] connected successfully
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-8] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-9] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-7] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-0] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-6] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-5] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-4] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-1] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-2] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-pub-3] disconnected
+2026/05/28 10:04:25 client.go:225: gmqtt: client [test-concurrent-sub] disconnected
+2026/05/28 10:04:25 main.go:220:   ✓ 通过 (耗时: 530.485792ms)
+2026/05/28 10:04:25 main.go:222:   详情: 并发测试: 10个客户端, 每个发送10条, 总接收=100

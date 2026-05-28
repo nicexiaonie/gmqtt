@@ -27,7 +27,7 @@ docker exec -it emqx emqx ctl users add test2 123456
 
 // 测试配置
 const (
-	brokerAddr = "tcp://127.0.0.1:1883"
+	brokerAddr = "tcp://119.91.128.215:1883"
 	username   = "test1"
 	password   = "123456"
 )
@@ -1076,6 +1076,128 @@ func (ts *TestSuite) TestMultipleSubscribe() error {
 	}
 }
 
+// ========== Shared Subscription 分组测试 ==========
+
+func (ts *TestSuite) TestSharedSubscriptionGroup() (string, error) {
+	const messageCount = 20
+	topic := "test/shared/order/created"
+	filter := "test/shared/order/#"
+	group := "order-workers"
+
+	receivedByClient := map[string]int{
+		"worker-1": 0,
+		"worker-2": 0,
+	}
+	receivedMessages := make(map[string]string)
+	var mu sync.Mutex
+	var received int64
+	var once sync.Once
+	done := make(chan struct{})
+
+	newWorker := func(clientID, workerName string) (*gmqtt.Client, error) {
+		opts := gmqtt.NewDefaultOptions()
+		opts.Brokers = []string{brokerAddr}
+		opts.ClientID = clientID
+		opts.Username = username
+		opts.Password = password
+
+		client, err := gmqtt.NewClient(opts)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := client.Connect(); err != nil {
+			return nil, err
+		}
+
+		handler := func(topic string, payload []byte) error {
+			messageID := string(payload)
+
+			mu.Lock()
+			receivedByClient[workerName]++
+			if previousWorker, exists := receivedMessages[messageID]; exists {
+				mu.Unlock()
+				return fmt.Errorf("消息重复投递: %s 已由 %s 接收", messageID, previousWorker)
+			}
+			receivedMessages[messageID] = workerName
+			mu.Unlock()
+
+			if atomic.AddInt64(&received, 1) == messageCount {
+				once.Do(func() { close(done) })
+			}
+			return nil
+		}
+
+		if err := client.SubscribeShared(group, filter, gmqtt.QoS1, handler); err != nil {
+			client.Disconnect(250)
+			return nil, err
+		}
+
+		return client, nil
+	}
+
+	worker1, err := newWorker("test-shared-worker-1", "worker-1")
+	if err != nil {
+		return "", fmt.Errorf("worker-1 初始化失败: %w", err)
+	}
+	defer worker1.Disconnect(250)
+
+	worker2, err := newWorker("test-shared-worker-2", "worker-2")
+	if err != nil {
+		return "", fmt.Errorf("worker-2 初始化失败: %w", err)
+	}
+	defer worker2.Disconnect(250)
+
+	pubOpts := gmqtt.NewDefaultOptions()
+	pubOpts.Brokers = []string{brokerAddr}
+	pubOpts.ClientID = "test-shared-publisher"
+	pubOpts.Username = username
+	pubOpts.Password = password
+
+	publisher, err := gmqtt.NewClient(pubOpts)
+	if err != nil {
+		return "", err
+	}
+
+	if err := publisher.Connect(); err != nil {
+		return "", err
+	}
+	defer publisher.Disconnect(250)
+
+	time.Sleep(300 * time.Millisecond)
+
+	for i := 0; i < messageCount; i++ {
+		messageID := fmt.Sprintf("shared-msg-%02d", i)
+		if err := publisher.Publish(topic, gmqtt.QoS1, false, messageID); err != nil {
+			return "", fmt.Errorf("发布失败: %w", err)
+		}
+		atomic.AddInt64(&ts.stats.MessagesSent, 1)
+	}
+
+	select {
+	case <-done:
+		atomic.AddInt64(&ts.stats.MessagesRecv, received)
+		mu.Lock()
+		worker1Count := receivedByClient["worker-1"]
+		worker2Count := receivedByClient["worker-2"]
+		uniqueCount := len(receivedMessages)
+		mu.Unlock()
+
+		if uniqueCount != messageCount {
+			return "", fmt.Errorf("去重后消息数量错误: 期望=%d, 实际=%d", messageCount, uniqueCount)
+		}
+		if worker1Count == messageCount || worker2Count == messageCount {
+			return "", fmt.Errorf("分组消费未分摊: worker-1=%d, worker-2=%d", worker1Count, worker2Count)
+		}
+
+		return fmt.Sprintf("shared group=%s, filter=%s, 发送=%d, worker-1接收=%d, worker-2接收=%d", group, filter, messageCount, worker1Count, worker2Count), nil
+	case <-time.After(5 * time.Second):
+		atomic.AddInt64(&ts.stats.MessagesRecv, received)
+		atomic.AddInt64(&ts.stats.MessagesLost, messageCount-received)
+		return "", fmt.Errorf("超时: shared subscription 只接收到 %d/%d 条消息", received, messageCount)
+	}
+}
+
 // ========== 主测试入口 ==========
 
 func main() {
@@ -1145,6 +1267,7 @@ func main() {
 	suite.Run("7.1 Subscriber 所有方法", suite.TestSubscriber)
 	suite.Run("7.2 SubscriberGroup 管理", suite.TestSubscriberGroup)
 	suite.Run("7.3 批量订阅", suite.TestMultipleSubscribe)
+	suite.RunWithDetails("7.4 Shared Subscription 分组消费", suite.TestSharedSubscriptionGroup)
 
 	// ========== 8. JSON 消息测试 ==========
 	fmt.Println("\n【8. JSON 消息测试】")

@@ -14,6 +14,7 @@
 - ✅ **全局管理** - 支持多客户端注册和管理
 - ✅ **遗嘱消息** - 支持 Last Will and Testament
 - ✅ **通配符订阅** - 支持 `+` 和 `#` 通配符
+- ✅ **共享订阅** - 支持 MQTT shared subscription 消费组
 
 ## 安装
 
@@ -322,6 +323,36 @@ subscriptions := map[string]gmqtt.QoS{
 client.SubscribeMultiple(subscriptions, handler)
 ```
 
+### 共享订阅
+
+shared subscription 是 MQTT broker 侧的消费组能力。同一个 group 内的多个客户端订阅相同 filter 时，broker 会把每条消息投递给其中一个客户端，而不是每个客户端都收到一份。
+
+```go
+// 单个 shared subscription
+err := client.SubscribeShared("workers", "sensor/+/temperature", gmqtt.QoS1, func(topic string, payload []byte) error {
+    log.Printf("收到温度数据: topic=%s payload=%s", topic, string(payload))
+    return nil
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// 批量 shared subscription
+subscriptions := map[string]gmqtt.QoS{
+    "device/+/status": gmqtt.QoS1,
+    "system/#":        gmqtt.QoS0,
+}
+err = client.SubscribeSharedMultiple("workers", subscriptions, handler)
+if err != nil {
+    log.Fatal(err)
+}
+
+// 取消 shared subscription
+err = client.UnsubscribeShared("workers", "sensor/+/temperature")
+```
+
+group name 不能为空，且不能包含 `/`、`+`、`#`；topic filter 不能为空。
+
 ### 自动重连
 
 ```go
@@ -362,7 +393,10 @@ PublishWithTimeout(topic string, qos QoS, retained bool, payload interface{}, ti
 // 订阅管理
 Subscribe(topic string, qos QoS, handler MessageHandler) error
 SubscribeMultiple(subscriptions map[string]QoS, handler MessageHandler) error
+SubscribeShared(group, topic string, qos QoS, handler MessageHandler) error
+SubscribeSharedMultiple(group string, subscriptions map[string]QoS, handler MessageHandler) error
 Unsubscribe(topics ...string) error
+UnsubscribeShared(group string, topics ...string) error
 
 // 其他
 SetDefaultHandler(handler MessageHandler)
@@ -416,8 +450,9 @@ var (
     ErrNoHandler           // 未设置消息处理函数
     ErrClientNotFound      // 客户端不存在
     ErrPublishTimeout      // 发布超时
-    ErrSubscribeTimeout    // 订阅超时
-    ErrUnsubscribeTimeout  // 取消订阅超时
+    ErrSubscribeTimeout          // 订阅超时
+    ErrUnsubscribeTimeout        // 取消订阅超时
+    ErrInvalidSharedSubscription // shared subscription 参数无效
 )
 ```
 

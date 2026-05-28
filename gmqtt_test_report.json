@@ -1,0 +1,165 @@
+{
+  "Total": 19,
+  "Passed": 19,
+  "Failed": 0,
+  "Results": [
+    {
+      "Name": "1.1 基础连接与断开",
+      "Passed": true,
+      "Error": null,
+      "Duration": 35461791,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:16.533645+08:00"
+    },
+    {
+      "Name": "1.2 连接回调函数",
+      "Passed": true,
+      "Error": null,
+      "Duration": 137527458,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:16.569121+08:00"
+    },
+    {
+      "Name": "2.1 QoS0 + CleanSession=true",
+      "Passed": true,
+      "Error": null,
+      "Duration": 285717208,
+      "Details": "QoS=0, CleanSession=true, 发送=10, 接收=10",
+      "Timestamp": "2026-05-28T10:04:16.706926+08:00"
+    },
+    {
+      "Name": "2.2 QoS0 + CleanSession=false",
+      "Passed": true,
+      "Error": null,
+      "Duration": 280234625,
+      "Details": "QoS=0, CleanSession=false, 发送=10, 接收=10",
+      "Timestamp": "2026-05-28T10:04:16.992686+08:00"
+    },
+    {
+      "Name": "2.3 QoS1 + CleanSession=true",
+      "Passed": true,
+      "Error": null,
+      "Duration": 559127250,
+      "Details": "QoS=1, CleanSession=true, 发送=10, 接收=10",
+      "Timestamp": "2026-05-28T10:04:17.272942+08:00"
+    },
+    {
+      "Name": "2.4 QoS1 + CleanSession=false",
+      "Passed": true,
+      "Error": null,
+      "Duration": 501085625,
+      "Details": "QoS=1, CleanSession=false, 发送=10, 接收=10",
+      "Timestamp": "2026-05-28T10:04:17.8321+08:00"
+    },
+    {
+      "Name": "2.5 QoS2 + CleanSession=true",
+      "Passed": true,
+      "Error": null,
+      "Duration": 1024391208,
+      "Details": "QoS=2, CleanSession=true, 发送=10, 接收=10",
+      "Timestamp": "2026-05-28T10:04:18.333208+08:00"
+    },
+    {
+      "Name": "2.6 QoS2 + CleanSession=false",
+      "Passed": true,
+      "Error": null,
+      "Duration": 1005866833,
+      "Details": "QoS=2, CleanSession=false, 发送=10, 接收=10",
+      "Timestamp": "2026-05-28T10:04:19.357614+08:00"
+    },
+    {
+      "Name": "3.1 离线消息接收测试",
+      "Passed": true,
+      "Error": null,
+      "Duration": 1147136542,
+      "Details": "离线消息测试: 发送=10, 重连后接收=10",
+      "Timestamp": "2026-05-28T10:04:20.363542+08:00"
+    },
+    {
+      "Name": "4.1 保留消息发送与接收",
+      "Passed": true,
+      "Error": null,
+      "Duration": 333178416,
+      "Details": "保留消息正确接收",
+      "Timestamp": "2026-05-28T10:04:21.51074+08:00"
+    },
+    {
+      "Name": "5.1 遗嘱消息触发",
+      "Passed": true,
+      "Error": null,
+      "Duration": 320917625,
+      "Details": "遗嘱消息正确接收",
+      "Timestamp": "2026-05-28T10:04:21.843954+08:00"
+    },
+    {
+      "Name": "6.1 Publisher 所有方法",
+      "Passed": true,
+      "Error": null,
+      "Duration": 117725583,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:22.164934+08:00"
+    },
+    {
+      "Name": "7.1 Subscriber 所有方法",
+      "Passed": true,
+      "Error": null,
+      "Duration": 430021667,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:22.282692+08:00"
+    },
+    {
+      "Name": "7.2 SubscriberGroup 管理",
+      "Passed": true,
+      "Error": null,
+      "Duration": 502423416,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:22.712726+08:00"
+    },
+    {
+      "Name": "7.3 批量订阅",
+      "Passed": true,
+      "Error": null,
+      "Duration": 252344584,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:23.21516+08:00"
+    },
+    {
+      "Name": "7.4 Shared Subscription 分组消费",
+      "Passed": true,
+      "Error": null,
+      "Duration": 826991250,
+      "Details": "shared group=order-workers, filter=test/shared/order/#, 发送=20, worker-1接收=10, worker-2接收=10",
+      "Timestamp": "2026-05-28T10:04:23.467527+08:00"
+    },
+    {
+      "Name": "8.1 JSON 序列化与反序列化",
+      "Passed": true,
+      "Error": null,
+      "Duration": 215466333,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:24.294626+08:00"
+    },
+    {
+      "Name": "9.1 RegisterClient/GetClient/CloseAll",
+      "Passed": true,
+      "Error": null,
+      "Duration": 418848833,
+      "Details": "",
+      "Timestamp": "2026-05-28T10:04:24.510123+08:00"
+    },
+    {
+      "Name": "10.1 多客户端并发发布",
+      "Passed": true,
+      "Error": null,
+      "Duration": 530485792,
+      "Details": "并发测试: 10个客户端, 每个发送10条, 总接收=100",
+      "Timestamp": "2026-05-28T10:04:24.929058+08:00"
+    }
+  ],
+  "MessagesSent": 202,
+  "MessagesRecv": 200,
+  "MessagesLost": 0,
+  "MessagesDup": 0,
+  "StartTime": "2026-05-28T10:04:16.53364+08:00",
+  "EndTime": "2026-05-28T10:04:25.459621+08:00"
+}
