@@ -1,6 +1,7 @@
 package gmqtt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,10 +9,11 @@ import (
 
 // Subscriber MQTT订阅者
 type Subscriber struct {
-	client  *Client
-	topics  []string
-	qos     QoS
-	handler MessageHandler
+	client         *Client
+	topics         []string
+	qos            QoS
+	handler        MessageHandler
+	contextHandler MessageHandlerContext
 }
 
 // NewSubscriber 创建订阅者
@@ -26,6 +28,13 @@ func NewSubscriber(client *Client, topics []string, qos QoS) *Subscriber {
 // SetHandler 设置消息处理器
 func (s *Subscriber) SetHandler(handler MessageHandler) {
 	s.handler = handler
+	s.contextHandler = adaptMessageHandler(handler)
+}
+
+// SetHandlerContext 设置带上下文的消息处理器
+func (s *Subscriber) SetHandlerContext(handler MessageHandlerContext) {
+	s.handler = nil
+	s.contextHandler = handler
 }
 
 // SetJSONHandler 设置JSON消息处理器
@@ -36,6 +45,18 @@ func (s *Subscriber) SetJSONHandler(handler func(topic string, data interface{})
 		}
 		return handler(topic, dataType)
 	}
+	s.contextHandler = adaptMessageHandler(s.handler)
+}
+
+// SetJSONHandlerContext 设置带上下文的JSON消息处理器
+func (s *Subscriber) SetJSONHandlerContext(handler func(ctx context.Context, topic string, data interface{}) error, dataType interface{}) {
+	s.handler = nil
+	s.contextHandler = func(ctx context.Context, topic string, payload []byte) error {
+		if err := json.Unmarshal(payload, dataType); err != nil {
+			return fmt.Errorf("gmqtt: unmarshal json failed: %w", err)
+		}
+		return handler(ctx, topic, dataType)
+	}
 }
 
 // SetStringHandler 设置字符串消息处理器
@@ -43,16 +64,30 @@ func (s *Subscriber) SetStringHandler(handler func(topic string, message string)
 	s.handler = func(topic string, payload []byte) error {
 		return handler(topic, string(payload))
 	}
+	s.contextHandler = adaptMessageHandler(s.handler)
+}
+
+// SetStringHandlerContext 设置带上下文的字符串消息处理器
+func (s *Subscriber) SetStringHandlerContext(handler func(ctx context.Context, topic string, message string) error) {
+	s.handler = nil
+	s.contextHandler = func(ctx context.Context, topic string, payload []byte) error {
+		return handler(ctx, topic, string(payload))
+	}
 }
 
 // Subscribe 开始订阅
 func (s *Subscriber) Subscribe() error {
-	if s.handler == nil {
+	return s.SubscribeContext(context.Background())
+}
+
+// SubscribeContext 开始订阅
+func (s *Subscriber) SubscribeContext(ctx context.Context) error {
+	if s.contextHandler == nil {
 		return ErrNoHandler
 	}
 
 	if len(s.topics) == 1 {
-		return s.client.Subscribe(s.topics[0], s.qos, s.handler)
+		return s.client.SubscribeContext(ctx, s.topics[0], s.qos, s.contextHandler)
 	}
 
 	// 批量订阅
@@ -60,12 +95,17 @@ func (s *Subscriber) Subscribe() error {
 	for _, topic := range s.topics {
 		subscriptions[topic] = s.qos
 	}
-	return s.client.SubscribeMultiple(subscriptions, s.handler)
+	return s.client.SubscribeMultipleContext(ctx, subscriptions, s.contextHandler)
 }
 
 // Unsubscribe 取消订阅
 func (s *Subscriber) Unsubscribe() error {
-	return s.client.Unsubscribe(s.topics...)
+	return s.UnsubscribeContext(context.Background())
+}
+
+// UnsubscribeContext 取消订阅
+func (s *Subscriber) UnsubscribeContext(ctx context.Context) error {
+	return s.client.UnsubscribeContext(ctx, s.topics...)
 }
 
 // AddTopic 添加订阅主题

@@ -1,6 +1,8 @@
 package gmqtt
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -28,7 +30,12 @@ type Client struct {
 	subLock       sync.RWMutex
 
 	// 默认消息处理器
-	defaultHandler MessageHandler
+	defaultHandler        MessageHandler
+	defaultContextHandler MessageHandlerContext
+
+	// 中间件链
+	publishHandler PublishHandler
+	handlerChain   HandlerFunc
 }
 
 // NewClient 创建新的MQTT客户端
@@ -105,17 +112,70 @@ func NewClient(opts *ClientOptions) (*Client, error) {
 	})
 
 	c.client = mqtt.NewClient(mqttOpts)
+	c.publishHandler = chainPublishMiddlewares(c.publishFinal, opts.PublishMiddlewares...)
+	c.handlerChain = chainHandlerMiddlewares(c.handleFinal, opts.HandlerMiddlewares...)
 	return c, nil
 }
 
-func (c *Client) addSubscription(topic string, qos QoS, handler MessageHandler) {
+func adaptMessageHandler(handler MessageHandler) MessageHandlerContext {
+	if handler == nil {
+		return nil
+	}
+	return func(ctx context.Context, topic string, payload []byte) error {
+		return handler(topic, payload)
+	}
+}
+
+func chainPublishMiddlewares(final PublishHandler, middlewares ...PublishMiddleware) PublishHandler {
+	handler := final
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		if middlewares[i] != nil {
+			handler = middlewares[i](handler)
+		}
+	}
+	return handler
+}
+
+func chainHandlerMiddlewares(final HandlerFunc, middlewares ...HandlerMiddleware) HandlerFunc {
+	handler := final
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		if middlewares[i] != nil {
+			handler = middlewares[i](handler)
+		}
+	}
+	return handler
+}
+
+func waitTokenContext(ctx context.Context, token mqtt.Token) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	select {
+	case <-token.Done():
+		return token.Error()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (c *Client) addSubscription(topic string, qos QoS, handler MessageHandler, contextHandler ...MessageHandlerContext) {
+	var handlerContext MessageHandlerContext
+	if len(contextHandler) > 0 {
+		handlerContext = contextHandler[0]
+	}
+	if handlerContext == nil {
+		handlerContext = adaptMessageHandler(handler)
+	}
+
 	if _, exists := c.subscriptions[topic]; !exists {
 		c.subOrder = append(c.subOrder, topic)
 	}
 	c.subscriptions[topic] = &Subscription{
-		Topic:   topic,
-		QoS:     qos,
-		Handler: handler,
+		Topic:          topic,
+		QoS:            qos,
+		Handler:        handler,
+		ContextHandler: handlerContext,
 	}
 }
 
@@ -171,12 +231,17 @@ func topicFilterMatches(filter, topic string) bool {
 	return len(filterLevels) == len(topicLevels)
 }
 
-func (c *Client) findHandler(topic string) MessageHandler {
+func (c *Client) findHandler(topic string) MessageHandlerContext {
 	c.subLock.RLock()
 	defer c.subLock.RUnlock()
 
-	if sub, exists := c.subscriptions[topic]; exists && sub.Handler != nil {
-		return sub.Handler
+	if sub, exists := c.subscriptions[topic]; exists {
+		if sub.ContextHandler != nil {
+			return sub.ContextHandler
+		}
+		if sub.Handler != nil {
+			return adaptMessageHandler(sub.Handler)
+		}
 	}
 
 	for _, filter := range c.subOrder {
@@ -185,12 +250,17 @@ func (c *Client) findHandler(topic string) MessageHandler {
 		}
 
 		sub := c.subscriptions[filter]
-		if sub == nil || sub.Handler == nil {
+		if sub == nil {
 			continue
 		}
 
 		if topicFilterMatches(logicalSubscriptionFilter(filter), topic) {
-			return sub.Handler
+			if sub.ContextHandler != nil {
+				return sub.ContextHandler
+			}
+			if sub.Handler != nil {
+				return adaptMessageHandler(sub.Handler)
+			}
 		}
 	}
 
@@ -199,6 +269,11 @@ func (c *Client) findHandler(topic string) MessageHandler {
 
 // Connect 连接到MQTT Broker
 func (c *Client) Connect() error {
+	return c.ConnectContext(context.Background())
+}
+
+// ConnectContext 连接到MQTT Broker
+func (c *Client) ConnectContext(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -207,8 +282,8 @@ func (c *Client) Connect() error {
 	}
 
 	token := c.client.Connect()
-	if token.Wait() && token.Error() != nil {
-		return fmt.Errorf("gmqtt: connect failed: %w", token.Error())
+	if err := waitTokenContext(ctx, token); err != nil {
+		return fmt.Errorf("gmqtt: connect failed: %w", err)
 	}
 
 	log.Printf("gmqtt: client [%s] connected successfully", c.options.ClientID)
@@ -235,37 +310,58 @@ func (c *Client) IsConnected() bool {
 
 // Publish 发布消息
 func (c *Client) Publish(topic string, qos QoS, retained bool, payload interface{}) error {
+	return c.PublishContext(context.Background(), topic, qos, retained, payload)
+}
+
+// PublishContext 发布消息
+func (c *Client) PublishContext(ctx context.Context, topic string, qos QoS, retained bool, payload interface{}) error {
 	if !c.IsConnected() {
 		return ErrNotConnected
 	}
 
-	token := c.client.Publish(topic, byte(qos), retained, payload)
-	if token.Wait() && token.Error() != nil {
-		return fmt.Errorf("gmqtt: publish failed: %w", token.Error())
+	_, err := c.publishHandler(ctx, &PublishRequest{
+		Topic:    topic,
+		QoS:      qos,
+		Retained: retained,
+		Payload:  payload,
+	})
+	return err
+}
+
+func (c *Client) publishFinal(ctx context.Context, req *PublishRequest) (*PublishResponse, error) {
+	if req == nil {
+		return nil, errors.New("gmqtt: publish request is nil")
 	}
 
-	return nil
+	token := c.client.Publish(req.Topic, byte(req.QoS), req.Retained, req.Payload)
+	if err := waitTokenContext(ctx, token); err != nil {
+		return nil, fmt.Errorf("gmqtt: publish failed: %w", err)
+	}
+
+	return &PublishResponse{}, nil
 }
 
 // PublishWithTimeout 发布消息（带超时）
 func (c *Client) PublishWithTimeout(topic string, qos QoS, retained bool, payload interface{}, timeout time.Duration) error {
-	if !c.IsConnected() {
-		return ErrNotConnected
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-	token := c.client.Publish(topic, byte(qos), retained, payload)
-	if !token.WaitTimeout(timeout) {
-		return ErrPublishTimeout
+	if err := c.PublishContext(ctx, topic, qos, retained, payload); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return ErrPublishTimeout
+		}
+		return err
 	}
-	if token.Error() != nil {
-		return fmt.Errorf("gmqtt: publish failed: %w", token.Error())
-	}
-
 	return nil
 }
 
 // Subscribe 订阅主题
 func (c *Client) Subscribe(topic string, qos QoS, handler MessageHandler) error {
+	return c.SubscribeContext(context.Background(), topic, qos, adaptMessageHandler(handler))
+}
+
+// SubscribeContext 订阅主题
+func (c *Client) SubscribeContext(ctx context.Context, topic string, qos QoS, handler MessageHandlerContext) error {
 	if !c.IsConnected() {
 		return ErrNotConnected
 	}
@@ -276,7 +372,7 @@ func (c *Client) Subscribe(topic string, qos QoS, handler MessageHandler) error 
 
 	// 保存订阅信息
 	c.subLock.Lock()
-	c.addSubscription(topic, qos, handler)
+	c.addSubscription(topic, qos, nil, handler)
 	c.subLock.Unlock()
 
 	// 执行订阅
@@ -284,11 +380,11 @@ func (c *Client) Subscribe(topic string, qos QoS, handler MessageHandler) error 
 		c.handleMessage(msg)
 	})
 
-	if token.Wait() && token.Error() != nil {
+	if err := waitTokenContext(ctx, token); err != nil {
 		c.subLock.Lock()
 		c.removeSubscription(topic)
 		c.subLock.Unlock()
-		return fmt.Errorf("gmqtt: subscribe failed: %w", token.Error())
+		return fmt.Errorf("gmqtt: subscribe failed: %w", err)
 	}
 
 	log.Printf("gmqtt: client [%s] subscribed to topic [%s] with QoS %d", c.options.ClientID, topic, qos)
@@ -297,6 +393,11 @@ func (c *Client) Subscribe(topic string, qos QoS, handler MessageHandler) error 
 
 // SubscribeMultiple 批量订阅
 func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler MessageHandler) error {
+	return c.SubscribeMultipleContext(context.Background(), subscriptions, adaptMessageHandler(handler))
+}
+
+// SubscribeMultipleContext 批量订阅
+func (c *Client) SubscribeMultipleContext(ctx context.Context, subscriptions map[string]QoS, handler MessageHandlerContext) error {
 	if !c.IsConnected() {
 		return ErrNotConnected
 	}
@@ -310,7 +411,7 @@ func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler Message
 	c.subLock.Lock()
 	for topic, qos := range subscriptions {
 		filters[topic] = byte(qos)
-		c.addSubscription(topic, qos, handler)
+		c.addSubscription(topic, qos, nil, handler)
 	}
 	c.subLock.Unlock()
 
@@ -319,14 +420,14 @@ func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler Message
 		c.handleMessage(msg)
 	})
 
-	if token.Wait() && token.Error() != nil {
+	if err := waitTokenContext(ctx, token); err != nil {
 		// 清理订阅信息
 		c.subLock.Lock()
 		for topic := range subscriptions {
 			c.removeSubscription(topic)
 		}
 		c.subLock.Unlock()
-		return fmt.Errorf("gmqtt: subscribe multiple failed: %w", token.Error())
+		return fmt.Errorf("gmqtt: subscribe multiple failed: %w", err)
 	}
 
 	log.Printf("gmqtt: client [%s] subscribed to %d topics", c.options.ClientID, len(subscriptions))
@@ -335,15 +436,25 @@ func (c *Client) SubscribeMultiple(subscriptions map[string]QoS, handler Message
 
 // SubscribeShared 订阅共享主题
 func (c *Client) SubscribeShared(group, topic string, qos QoS, handler MessageHandler) error {
+	return c.SubscribeSharedContext(context.Background(), group, topic, qos, adaptMessageHandler(handler))
+}
+
+// SubscribeSharedContext 订阅共享主题
+func (c *Client) SubscribeSharedContext(ctx context.Context, group, topic string, qos QoS, handler MessageHandlerContext) error {
 	sharedTopic, err := buildSharedSubscriptionTopic(group, topic)
 	if err != nil {
 		return err
 	}
-	return c.Subscribe(sharedTopic, qos, handler)
+	return c.SubscribeContext(ctx, sharedTopic, qos, handler)
 }
 
 // SubscribeSharedMultiple 批量订阅共享主题
 func (c *Client) SubscribeSharedMultiple(group string, subscriptions map[string]QoS, handler MessageHandler) error {
+	return c.SubscribeSharedMultipleContext(context.Background(), group, subscriptions, adaptMessageHandler(handler))
+}
+
+// SubscribeSharedMultipleContext 批量订阅共享主题
+func (c *Client) SubscribeSharedMultipleContext(ctx context.Context, group string, subscriptions map[string]QoS, handler MessageHandlerContext) error {
 	sharedSubscriptions := make(map[string]QoS)
 	for topic, qos := range subscriptions {
 		sharedTopic, err := buildSharedSubscriptionTopic(group, topic)
@@ -352,11 +463,16 @@ func (c *Client) SubscribeSharedMultiple(group string, subscriptions map[string]
 		}
 		sharedSubscriptions[sharedTopic] = qos
 	}
-	return c.SubscribeMultiple(sharedSubscriptions, handler)
+	return c.SubscribeMultipleContext(ctx, sharedSubscriptions, handler)
 }
 
 // UnsubscribeShared 取消共享订阅
 func (c *Client) UnsubscribeShared(group string, topics ...string) error {
+	return c.UnsubscribeSharedContext(context.Background(), group, topics...)
+}
+
+// UnsubscribeSharedContext 取消共享订阅
+func (c *Client) UnsubscribeSharedContext(ctx context.Context, group string, topics ...string) error {
 	sharedTopics := make([]string, 0, len(topics))
 	for _, topic := range topics {
 		sharedTopic, err := buildSharedSubscriptionTopic(group, topic)
@@ -365,18 +481,23 @@ func (c *Client) UnsubscribeShared(group string, topics ...string) error {
 		}
 		sharedTopics = append(sharedTopics, sharedTopic)
 	}
-	return c.Unsubscribe(sharedTopics...)
+	return c.UnsubscribeContext(ctx, sharedTopics...)
 }
 
 // Unsubscribe 取消订阅
 func (c *Client) Unsubscribe(topics ...string) error {
+	return c.UnsubscribeContext(context.Background(), topics...)
+}
+
+// UnsubscribeContext 取消订阅
+func (c *Client) UnsubscribeContext(ctx context.Context, topics ...string) error {
 	if !c.IsConnected() {
 		return ErrNotConnected
 	}
 
 	token := c.client.Unsubscribe(topics...)
-	if token.Wait() && token.Error() != nil {
-		return fmt.Errorf("gmqtt: unsubscribe failed: %w", token.Error())
+	if err := waitTokenContext(ctx, token); err != nil {
+		return fmt.Errorf("gmqtt: unsubscribe failed: %w", err)
 	}
 
 	// 清理订阅信息
@@ -392,26 +513,52 @@ func (c *Client) Unsubscribe(topics ...string) error {
 
 // SetDefaultHandler 设置默认消息处理器
 func (c *Client) SetDefaultHandler(handler MessageHandler) {
+	c.SetDefaultHandlerContext(adaptMessageHandler(handler))
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.defaultHandler = handler
 }
 
-// handleMessage 处理接收到的消息
-func (c *Client) handleMessage(msg mqtt.Message) {
-	topic := msg.Topic()
+// SetDefaultHandlerContext 设置默认消息处理器
+func (c *Client) SetDefaultHandlerContext(handler MessageHandlerContext) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.defaultContextHandler = handler
+	c.defaultHandler = nil
+}
 
-	var handler MessageHandler
-	if handler = c.findHandler(topic); handler == nil {
-		c.mu.RLock()
-		handler = c.defaultHandler
-		c.mu.RUnlock()
+func (c *Client) handleFinal(ctx context.Context, req *HandlerRequest) (*HandlerResponse, error) {
+	if req == nil || req.Message == nil {
+		return nil, errors.New("gmqtt: handler request is nil")
 	}
 
-	if handler != nil {
-		if err := handler(topic, msg.Payload()); err != nil {
-			log.Printf("gmqtt: message handler error for topic [%s]: %v", topic, err)
+	handler := c.findHandler(req.Message.Topic)
+	if handler == nil {
+		c.mu.RLock()
+		handler = c.defaultContextHandler
+		if handler == nil && c.defaultHandler != nil {
+			handler = adaptMessageHandler(c.defaultHandler)
 		}
+		c.mu.RUnlock()
+	}
+	if handler == nil {
+		return &HandlerResponse{}, nil
+	}
+
+	if err := handler(ctx, req.Message.Topic, req.Message.Payload); err != nil {
+		return nil, err
+	}
+	return &HandlerResponse{}, nil
+}
+
+// handleMessage 处理接收到的消息
+func (c *Client) handleMessage(msg mqtt.Message) {
+	message := FromMQTTMessage(msg)
+	_, err := c.handlerChain(context.Background(), &HandlerRequest{
+		Message: message,
+	})
+	if err != nil {
+		log.Printf("gmqtt: message handler error for topic [%s]: %v", message.Topic, err)
 	}
 }
 

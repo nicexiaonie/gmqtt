@@ -1,6 +1,7 @@
 package gmqtt
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -10,18 +11,37 @@ import (
 )
 
 type mockToken struct {
-	err error
+	err  error
+	done chan struct{}
+}
+
+func (t *mockToken) wait() bool {
+	if t.done != nil {
+		<-t.done
+	}
+	return true
 }
 
 func (t *mockToken) Wait() bool {
-	return true
+	return t.wait()
 }
 
-func (t *mockToken) WaitTimeout(time.Duration) bool {
-	return true
+func (t *mockToken) WaitTimeout(timeout time.Duration) bool {
+	if t.done == nil {
+		return true
+	}
+	select {
+	case <-t.done:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
 }
 
 func (t *mockToken) Done() <-chan struct{} {
+	if t.done != nil {
+		return t.done
+	}
 	done := make(chan struct{})
 	close(done)
 	return done
@@ -33,12 +53,20 @@ func (t *mockToken) Error() error {
 
 type mockMQTTClient struct {
 	connected          bool
+	publishedTopic     string
+	publishedQoS       byte
+	publishedRetained  bool
+	publishedPayload   interface{}
 	subscribedTopic    string
 	subscribedQoS      byte
 	subscribedMultiple map[string]byte
 	unsubscribedTopics []string
+	publishErr         error
 	subscribeErr       error
 	unsubscribeErr     error
+	publishToken       mqtt.Token
+	subscribeToken     mqtt.Token
+	unsubscribeToken   mqtt.Token
 }
 
 func (c *mockMQTTClient) IsConnected() bool {
@@ -55,23 +83,39 @@ func (c *mockMQTTClient) Connect() mqtt.Token {
 
 func (c *mockMQTTClient) Disconnect(uint) {}
 
-func (c *mockMQTTClient) Publish(string, byte, bool, interface{}) mqtt.Token {
-	return &mockToken{}
+func (c *mockMQTTClient) Publish(topic string, qos byte, retained bool, payload interface{}) mqtt.Token {
+	c.publishedTopic = topic
+	c.publishedQoS = qos
+	c.publishedRetained = retained
+	c.publishedPayload = payload
+	if c.publishToken != nil {
+		return c.publishToken
+	}
+	return &mockToken{err: c.publishErr}
 }
 
 func (c *mockMQTTClient) Subscribe(topic string, qos byte, callback mqtt.MessageHandler) mqtt.Token {
 	c.subscribedTopic = topic
 	c.subscribedQoS = qos
+	if c.subscribeToken != nil {
+		return c.subscribeToken
+	}
 	return &mockToken{err: c.subscribeErr}
 }
 
 func (c *mockMQTTClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
 	c.subscribedMultiple = filters
+	if c.subscribeToken != nil {
+		return c.subscribeToken
+	}
 	return &mockToken{err: c.subscribeErr}
 }
 
 func (c *mockMQTTClient) Unsubscribe(topics ...string) mqtt.Token {
 	c.unsubscribedTopics = topics
+	if c.unsubscribeToken != nil {
+		return c.unsubscribeToken
+	}
 	return &mockToken{err: c.unsubscribeErr}
 }
 
@@ -82,12 +126,15 @@ func (c *mockMQTTClient) OptionsReader() mqtt.ClientOptionsReader {
 }
 
 func newTestClient(mqttClient mqtt.Client) *Client {
-	return &Client{
+	client := &Client{
 		options:       &ClientOptions{ClientID: "test"},
 		client:        mqttClient,
 		subscriptions: make(map[string]*Subscription),
 		subOrder:      make([]string, 0),
 	}
+	client.publishHandler = chainPublishMiddlewares(client.publishFinal)
+	client.handlerChain = chainHandlerMiddlewares(client.handleFinal)
+	return client
 }
 
 func TestBuildSharedSubscriptionTopic(t *testing.T) {
@@ -179,7 +226,7 @@ func TestFindHandlerPrefersExactMatch(t *testing.T) {
 	if handler == nil {
 		t.Fatal("expected handler")
 	}
-	if err := handler("devices/a/status", nil); err != nil {
+	if err := handler(context.Background(), "devices/a/status", nil); err != nil {
 		t.Fatal(err)
 	}
 	if !exactCalled || wildcardCalled {
@@ -206,7 +253,7 @@ func TestFindHandlerUsesRegistrationOrder(t *testing.T) {
 	if handler == nil {
 		t.Fatal("expected handler")
 	}
-	if err := handler("devices/a/status", nil); err != nil {
+	if err := handler(context.Background(), "devices/a/status", nil); err != nil {
 		t.Fatal(err)
 	}
 	if called != "first" {
@@ -229,7 +276,7 @@ func TestFindHandlerMatchesSharedWildcard(t *testing.T) {
 	if handler == nil {
 		t.Fatal("expected handler")
 	}
-	if err := handler("sensors/a/data", nil); err != nil {
+	if err := handler(context.Background(), "sensors/a/data", nil); err != nil {
 		t.Fatal(err)
 	}
 	if !called {

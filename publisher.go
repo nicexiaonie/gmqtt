@@ -1,6 +1,7 @@
 package gmqtt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -24,12 +25,22 @@ func NewPublisher(client *Client, topic string, qos QoS) *Publisher {
 
 // Publish 发布消息
 func (p *Publisher) Publish(payload interface{}) error {
-	return p.client.Publish(p.topic, p.qos, false, payload)
+	return p.PublishContext(context.Background(), payload)
+}
+
+// PublishContext 发布消息
+func (p *Publisher) PublishContext(ctx context.Context, payload interface{}) error {
+	return p.client.PublishContext(ctx, p.topic, p.qos, false, payload)
 }
 
 // PublishRetained 发布保留消息
 func (p *Publisher) PublishRetained(payload interface{}) error {
-	return p.client.Publish(p.topic, p.qos, true, payload)
+	return p.PublishRetainedContext(context.Background(), payload)
+}
+
+// PublishRetainedContext 发布保留消息
+func (p *Publisher) PublishRetainedContext(ctx context.Context, payload interface{}) error {
+	return p.client.PublishContext(ctx, p.topic, p.qos, true, payload)
 }
 
 // PublishWithTimeout 发布消息（带超时）
@@ -39,30 +50,50 @@ func (p *Publisher) PublishWithTimeout(payload interface{}, timeout time.Duratio
 
 // PublishJSON 发布JSON消息
 func (p *Publisher) PublishJSON(data interface{}) error {
+	return p.PublishJSONContext(context.Background(), data)
+}
+
+// PublishJSONContext 发布JSON消息
+func (p *Publisher) PublishJSONContext(ctx context.Context, data interface{}) error {
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("gmqtt: marshal json failed: %w", err)
 	}
-	return p.Publish(payload)
+	return p.PublishContext(ctx, payload)
 }
 
 // PublishJSONRetained 发布JSON保留消息
 func (p *Publisher) PublishJSONRetained(data interface{}) error {
+	return p.PublishJSONRetainedContext(context.Background(), data)
+}
+
+// PublishJSONRetainedContext 发布JSON保留消息
+func (p *Publisher) PublishJSONRetainedContext(ctx context.Context, data interface{}) error {
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("gmqtt: marshal json failed: %w", err)
 	}
-	return p.PublishRetained(payload)
+	return p.PublishRetainedContext(ctx, payload)
 }
 
 // PublishString 发布字符串消息
 func (p *Publisher) PublishString(message string) error {
-	return p.Publish(message)
+	return p.PublishStringContext(context.Background(), message)
+}
+
+// PublishStringContext 发布字符串消息
+func (p *Publisher) PublishStringContext(ctx context.Context, message string) error {
+	return p.PublishContext(ctx, message)
 }
 
 // PublishBytes 发布字节消息
 func (p *Publisher) PublishBytes(data []byte) error {
-	return p.Publish(data)
+	return p.PublishBytesContext(context.Background(), data)
+}
+
+// PublishBytesContext 发布字节消息
+func (p *Publisher) PublishBytesContext(ctx context.Context, data []byte) error {
+	return p.PublishContext(ctx, data)
 }
 
 // SetTopic 设置主题

@@ -1216,7 +1216,7 @@ func main() {
 	fmt.Println("========================================")
 	fmt.Printf("Broker: %s\n", brokerAddr)
 	fmt.Printf("用户名: %s\n", username)
-	fmt.Println("========================================\n")
+	fmt.Printf("========================================\n\n")
 
 	suite := NewTestSuite()
 

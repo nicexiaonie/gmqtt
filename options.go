@@ -88,6 +88,12 @@ type ClientOptions struct {
 	// OrderMatters 是否保证消息顺序
 	// 默认: true
 	OrderMatters bool
+
+	// PublishMiddlewares 发布中间件
+	PublishMiddlewares []PublishMiddleware
+
+	// HandlerMiddlewares 消息处理中间件
+	HandlerMiddlewares []HandlerMiddleware
 }
 
 // NewDefaultOptions 创建默认配置
@@ -116,4 +122,14 @@ func (o *ClientOptions) Validate() error {
 		return ErrNoClientID
 	}
 	return nil
+}
+
+// UsePublishMiddleware 添加发布中间件
+func (o *ClientOptions) UsePublishMiddleware(middlewares ...PublishMiddleware) {
+	o.PublishMiddlewares = append(o.PublishMiddlewares, middlewares...)
+}
+
+// UseHandlerMiddleware 添加消息处理中间件
+func (o *ClientOptions) UseHandlerMiddleware(middlewares ...HandlerMiddleware) {
+	o.HandlerMiddlewares = append(o.HandlerMiddlewares, middlewares...)
 }
