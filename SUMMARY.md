@@ -20,7 +20,9 @@ gmqtt/
 ├── gmqtt_test.go                # 单元测试
 ├── shared_subscription_test.go  # shared subscription 测试
 ├── integration_test.go          # 集成测试
-├── otelgmqtt/                   # OpenTelemetry trace 中间件子包
+├── otelgmqtt/                   # OpenTelemetry trace 独立 Go module
+│   ├── go.mod                   # otelgmqtt 模块依赖管理
+│   ├── go.sum                   # otelgmqtt 模块依赖校验
 │   ├── options.go               # OTel 配置选项
 │   ├── envelope.go              # payload envelope 编解码
 │   ├── middleware.go            # OTel publish/handler middleware
@@ -31,7 +33,7 @@ gmqtt/
 └── DESIGN.md                    # 设计文档
 ```
 
-核心包保持轻量；OpenTelemetry 相关代码集中在 `otelgmqtt` 独立子包中。
+核心包保持轻量；OpenTelemetry 相关代码集中在 `otelgmqtt` 独立 Go module 中。
 
 
 ### ✅ 核心功能
@@ -59,7 +61,7 @@ gmqtt/
 - ✅ `context.Context` API，支持取消、deadline 和调用链上下文传递
 - ✅ 发布 middleware，支持统一 trace、日志、指标、payload 包装
 - ✅ 消息处理 middleware，支持统一 trace、日志、指标、payload 解包
-- ✅ 独立 `otelgmqtt` 子包，核心包不直接依赖 OTel API
+- ✅ 独立 `otelgmqtt` Go module，核心包不直接依赖 OTel API
 - ✅ OpenTelemetry producer / consumer span
 - ✅ MQTT 3.1.1 下通过 JSON payload envelope 传播 `traceparent`，支持父子与 span link 两种关联模型
 
@@ -102,7 +104,7 @@ gmqtt/
 - 接口清晰
 - 支持 context-aware API
 - 支持 publish / handler middleware
-- OpenTelemetry 集成放在独立 `otelgmqtt` 子包中
+- OpenTelemetry 集成放在独立 `otelgmqtt` Go module 中
 - 代码规范
 
 #### 5. 便捷使用 ⭐⭐⭐⭐⭐
@@ -183,7 +185,7 @@ BenchmarkOptionsValidate-14    0.2415 ns/op    0 B/op    0 allocs/op
 ├── golang.org/x/net v0.8.0                     # 网络库
 └── golang.org/x/sync v0.1.0                    # 同步原语
 
-OpenTelemetry 子包依赖:
+OpenTelemetry 独立模块依赖:
 ├── go.opentelemetry.io/otel v1.24.0
 ├── go.opentelemetry.io/otel/trace v1.24.0
 └── go.opentelemetry.io/otel/sdk v1.24.0        # 测试与 trace 验证使用

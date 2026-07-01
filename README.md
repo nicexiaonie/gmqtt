@@ -17,12 +17,20 @@
 - ✅ **共享订阅** - 支持 MQTT shared subscription 消费组
 - ✅ **Context API** - 支持 `context.Context` 取消、超时和调用链上下文传递
 - ✅ **Middleware 扩展** - 支持发布和消息处理链路的中间件扩展
-- ✅ **OpenTelemetry Trace** - 提供独立 `otelgmqtt` 子包，支持 producer/consumer span、跨 MQTT 的 trace context 传播，以及父子/span link 两种关联模型
+- ✅ **OpenTelemetry Trace** - 提供独立 `otelgmqtt` Go module，支持 producer/consumer span、跨 MQTT 的 trace context 传播，以及父子/span link 两种关联模型
 
 ## 安装
 
+核心模块：
+
 ```bash
 go get github.com/nicexiaonie/gmqtt
+```
+
+OpenTelemetry trace 模块按需单独安装：
+
+```bash
+go get github.com/nicexiaonie/gmqtt/otelgmqtt
 ```
 
 ## 快速开始
@@ -187,7 +195,7 @@ opts.UseHandlerMiddleware(func(next gmqtt.HandlerFunc) gmqtt.HandlerFunc {
 
 ### OpenTelemetry Trace
 
-OpenTelemetry 支持位于独立子包 `otelgmqtt`，核心 `gmqtt` 包不依赖任何 OTel API。它通过 `PublishMiddleware` 和 `HandlerMiddleware` 接入，提供两个层级的能力：
+OpenTelemetry 支持位于独立 Go module `github.com/nicexiaonie/gmqtt/otelgmqtt`，核心 `gmqtt` module 不依赖任何 OTel API。它通过 `PublishMiddleware` 和 `HandlerMiddleware` 接入，提供两个层级的能力：
 
 1. **Span 采集**（默认）：为每次发布创建 producer span、每次消息处理创建 consumer span，并附带 messaging 语义属性。**不修改 MQTT payload。**
 2. **跨 MQTT 传播**（opt-in）：通过 JSON envelope 将 W3C trace context 随消息一起传输，使消费端 span 能与生产端 span 关联成同一条链路。
@@ -765,8 +773,17 @@ opts.Brokers = []string{"ws://localhost:8080/mqtt"}
 
 ## 依赖
 
+核心模块依赖：
+
 - [github.com/eclipse/paho.mqtt.golang](https://github.com/eclipse/paho.mqtt.golang) v1.4.3
-- [go.opentelemetry.io/otel](https://go.opentelemetry.io/otel) v1.24.0（`otelgmqtt` 子包使用）
+
+`otelgmqtt` 模块按需单独安装，并依赖 [go.opentelemetry.io/otel](https://go.opentelemetry.io/otel) v1.24.0。
+
+## 发布标签
+
+根模块 `github.com/nicexiaonie/gmqtt` 使用普通 tag，例如 `v1.0.0`。
+
+独立 trace 模块 `github.com/nicexiaonie/gmqtt/otelgmqtt` 使用子目录前缀 tag，例如 `otelgmqtt/v1.0.0`。
 
 ## 许可证
 
